@@ -128,7 +128,6 @@ This outputs:
 ```
 monte_carlo_option_pricing.py     # Full implementation
 README.md                         # Documentation
-images/                           # Optional: plots for convergence
 LICENSE                           # MIT license
 ```
 

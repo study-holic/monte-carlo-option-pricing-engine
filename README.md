@@ -1,536 +1,150 @@
-# monte-carlo-option-pricing-engine
-Monte Carlo Option Pricing Engine with variance reduction techniques (antithetic variates, control variates), Greeks estimation, and convergence analysis.
+---
 
-Monte Carlo Option Pricing Engine
+# Monte Carlo Option Pricing Engine
 
 This project implements a Monte Carlo engine for pricing European call options under the Black–Scholes model. It includes antithetic variates, control variates, Greeks estimation, and convergence analysis. The goal is to demonstrate core quantitative finance techniques using clear and fully reproducible Python code.
 
-1. Overview
+---
 
-A European call option has the discounted expected payoff
+## 1. Overview
 
-𝐶
-=
-𝑒
-−
-𝑟
-𝑇
- 
-𝐸
-[
-(
-𝑆
-𝑇
-−
-𝐾
-)
-+
-]
-.
-C=e
-−rT
-E[(S
-T
-	​
+A European call option has the discounted expected payoff:
 
-−K)
-+
-].
+```
+C = e^{-rT} * E[(S_T - K)^+]
+```
 
 Under the Black–Scholes assumptions, the stock price follows geometric Brownian motion (GBM):
 
-𝑑
-𝑆
-𝑡
-=
-𝑟
-𝑆
-𝑡
- 
-𝑑
-𝑡
-+
-𝜎
-𝑆
-𝑡
- 
-𝑑
-𝑊
-𝑡
-,
-dS
-t
-	​
+```
+dS_t = r S_t dt + σ S_t dW_t
+```
 
-=rS
-t
-	​
+with closed-form solution:
 
-dt+σS
-t
-	​
+```
+S_T = S_0 * exp( (r - 0.5 σ^2) T + σ sqrt(T) Z )    where Z ~ N(0,1)
+```
 
-dW
-t
-	​
-
-,
-
-with closed-form solution
-
-𝑆
-𝑇
-=
-𝑆
-0
-exp
-⁡
-(
-(
-𝑟
-−
-1
-2
-𝜎
-2
-)
-𝑇
-+
-𝜎
-𝑇
- 
-𝑍
-)
-,
-𝑍
-∼
-𝑁
-(
-0
-,
-1
-)
-.
-S
-T
-	​
-
-=S
-0
-	​
-
-exp((r−
-2
-1
-	​
-
-σ
-2
-)T+σ
-T
-	​
-
-Z),Z∼N(0,1).
-
-Monte Carlo simulation approximates the expectation by generating 
-𝑀
-M independent samples of 
-𝑆
-𝑇
-S
-T
-	​
-
- and averaging the payoff.
+Monte Carlo simulation approximates the expectation by generating M independent samples of S_T and averaging the payoff.
 
 The methods included here follow standard quant practice: variance reduction, comparison against analytical prices, and numerical Greeks.
 
-2. Core Methods
-2.1 Plain Monte Carlo
+---
 
-The basic estimator is
+## 2. Core Methods
 
-𝐶
-^
-𝑀
-𝐶
-=
-𝑒
-−
-𝑟
-𝑇
-1
-𝑀
-∑
-𝑖
-=
-1
-𝑀
-(
-𝑆
-𝑇
-(
-𝑖
-)
-−
-𝐾
-)
-+
-.
-C
-^
-MC
-	​
+### 2.1 Plain Monte Carlo
 
-=e
-−rT
-M
-1
-	​
+The estimator:
 
-i=1
-∑
-M
-	​
+```
+C_MC = e^{-rT} * (1/M) * Σ (S_T^(i) - K)^+
+```
 
-(S
-T
-(i)
-	​
+The standard error decays as M^{-1/2}, which is slow.
 
-−K)
-+
-.
+### 2.2 Antithetic Variates
 
-Its standard error decays as 
-𝑀
-−
-1
-/
-2
-M
-−1/2
-, which is slow.
+Using Z and −Z to generate paired paths reduces noise:
 
-2.2 Antithetic Variates
+```
+C_anti = 0.5 * ( C(Z) + C(-Z) )
+```
 
-If 
-𝑍
-Z generates one path, using 
-−
-𝑍
-−Z generates another path that counteracts sampling noise.
-The estimator becomes
+### 2.3 Control Variates
 
-𝐶
-^
-𝑎
-𝑛
-𝑡
-𝑖
-=
-1
-2
-(
-𝐶
-(
-𝑍
-)
-+
-𝐶
-(
-−
-𝑍
-)
-)
-.
-C
-^
-anti
-	​
+Using S_T as a control variate because E[S_T] is known:
 
-=
-2
-1
-	​
+```
+E[S_T] = S_0 * e^{rT}
+```
 
-(C(Z)+C(−Z)).
+Adjusted estimator:
 
-This typically lowers the variance substantially.
+```
+C_cv = C_MC + c_opt * (S_T - E[S_T])
+```
 
-2.3 Control Variates
+with:
 
-We use 
-𝑆
-𝑇
-S
-T
-	​
+```
+c_opt = - Cov(C, S_T) / Var(S_T)
+```
 
- as the control variate because its expectation is known:
+---
 
-𝐸
-[
-𝑆
-𝑇
-]
-=
-𝑆
-0
-𝑒
-𝑟
-𝑇
-.
-E[S
-T
-	​
+## 3. Greeks
 
-]=S
-0
-	​
+### Delta (pathwise method)
 
-e
-rT
-.
+```
+Delta = e^{-rT} * E[ 1_{S_T > K} * (S_T / S_0) ]
+```
 
-The adjusted estimator is
+### Gamma (finite differences)
 
-𝐶
-^
-𝑐
-𝑣
-=
-𝐶
-^
-𝑀
-𝐶
-+
-𝑐
-opt
-(
-𝑆
-𝑇
-−
-𝐸
-[
-𝑆
-𝑇
-]
-)
-,
-C
-^
-cv
-	​
+```
+Gamma = ( C(S_0 + h) - 2 C(S_0) + C(S_0 - h) ) / h^2
+```
 
-=
-C
-^
-MC
-	​
+---
 
-+c
-opt
-	​
+## 4. Convergence
 
-(S
-T
-	​
+The project includes a convergence plot showing how Monte Carlo estimators approach the analytical Black–Scholes price as the number of paths increases.
+A log-scaled x-axis illustrates the effect of variance reduction techniques on estimator accuracy.
 
-−E[S
-T
-	​
+---
 
-]),
-
-where
-
-𝑐
-opt
-=
-−
-Cov
-(
-𝐶
-,
-𝑆
-𝑇
-)
-Var
-(
-𝑆
-𝑇
-)
-.
-c
-opt
-	​
-
-=−
-Var(S
-T
-	​
-
-)
-Cov(C,S
-T
-	​
-
-)
-	​
-
-.
-
-This reduction is often significant, especially for European calls.
-
-3. Greeks
-Delta
-
-Using the pathwise derivative method:
-
-Δ
-=
-𝑒
-−
-𝑟
-𝑇
- 
-𝐸
-[
-1
-{
-𝑆
-𝑇
->
-𝐾
-}
- 
-𝑆
-𝑇
-𝑆
-0
-]
-.
-Δ=e
-−rT
-E[1
-{S
-T
-	​
-
->K}
-	​
-
-S
-0
-	​
-
-S
-T
-	​
-
-	​
-
-].
-Gamma
-
-Gamma is computed using a standard centered finite-difference approximation:
-
-Γ
-≈
-𝐶
-(
-𝑆
-0
-+
-ℎ
-)
-−
-2
-𝐶
-(
-𝑆
-0
-)
-+
-𝐶
-(
-𝑆
-0
-−
-ℎ
-)
-ℎ
-2
-.
-Γ≈
-h
-2
-C(S
-0
-	​
-
-+h)−2C(S
-0
-	​
-
-)+C(S
-0
-	​
-
-−h)
-	​
-
-.
-4. Convergence
-
-The project includes code to plot estimator convergence against the analytical Black–Scholes price.
-A log-scaled path count illustrates how variance reduction shifts the curve upward, achieving lower error for the same computational effort.
-
-5. Running the Code
+## 5. Running the Code
 
 Dependencies:
 
+```
 numpy
 scipy
 matplotlib
+```
 
+Run:
 
-Run the project:
-
+```
 python monte_carlo_option_pricing.py
+```
 
+This outputs:
 
-This prints:
+* plain Monte Carlo price
+* antithetic variates price
+* control variate price
+* Delta and Gamma
+* a convergence plot
 
-plain Monte Carlo price
+---
 
-antithetic price
+## 6. File Structure
 
-control variate price
-
-Delta and Gamma
-
-a convergence plot comparing Monte Carlo estimators to the analytical price
-
-6. File Structure
+```
 monte_carlo_option_pricing.py     # Full implementation
-README.md                         # Project documentation
-images/                           # Optional: convergence plots
+README.md                         # Documentation
+images/                           # Optional: plots for convergence
 LICENSE                           # MIT license
+```
 
-7. Purpose
+---
 
-This project serves as a compact demonstration of:
+## 7. Purpose
 
-stochastic simulation under GBM
+This project demonstrates:
 
-Monte Carlo estimation for derivative pricing
+* stochastic simulation under GBM
+* Monte Carlo methods for option pricing
+* variance reduction techniques
+* numerical Greeks
+* convergence analysis
+* clear and modular implementation in Python
 
-variance reduction techniques used in quantitative finance
+---
 
-numerical estimation of Greeks
-
-convergence analysis relative to a closed-form benchmark
-
-clear, modular implementation in Python
+Thanks for reading :)

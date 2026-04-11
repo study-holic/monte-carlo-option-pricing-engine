@@ -2,18 +2,14 @@ import numpy as np
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 
-# ================================
 # Black–Scholes analytical solution
-# ================================
 def bs_call_price(S0, K, r, sigma, T):
     d1 = (np.log(S0 / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
     return S0 * norm.cdf(d1) - K * np.exp(-r*T) * norm.cdf(d2)
 
 
-# =======================
 # Path simulation
-# =======================
 def simulate_paths(S0, r, sigma, T, N, M):
     dt = T / N
     Z = np.random.normal(size=(M, N))
@@ -22,9 +18,7 @@ def simulate_paths(S0, r, sigma, T, N, M):
     return S0 * np.exp(log_paths)
 
 
-# =======================
 # Plain Monte Carlo
-# =======================
 def mc_european_call(S0, K, r, sigma, T, M, N=1_000):
     ST = simulate_paths(S0, r, sigma, T, N, M)[:, -1]
     payoff = np.maximum(ST - K, 0)
@@ -33,9 +27,7 @@ def mc_european_call(S0, K, r, sigma, T, M, N=1_000):
     return price, stderr
 
 
-# ======================================
 # Variance reduction: Antithetic variates
-# ======================================
 def mc_antithetic(S0, K, r, sigma, T, M, N=1_000):
     half = M // 2
     dt = T / N
@@ -57,9 +49,7 @@ def mc_antithetic(S0, K, r, sigma, T, M, N=1_000):
     return price, stderr
 
 
-# ===================================
 # Variance reduction: Control variates
-# ===================================
 def mc_control_variate(S0, K, r, sigma, T, M, N=1_000):
     ST = simulate_paths(S0, r, sigma, T, N, M)[:, -1]
 
@@ -81,9 +71,7 @@ def mc_control_variate(S0, K, r, sigma, T, M, N=1_000):
     return price, stderr
 
 
-# =======================
 # Greeks (Pathwise method)
-# =======================
 def mc_delta(S0, K, r, sigma, T, M, N=1_000):
     ST = simulate_paths(S0, r, sigma, T, N, M)[:, -1]
     payoff_grad = (ST > K) * (ST / S0)
@@ -99,9 +87,7 @@ def mc_gamma(S0, K, r, sigma, T, M, N=1_000, h=0.01):
     return gamma
 
 
-# =======================
 # Convergence Plot
-# =======================
 def convergence_plot(S0, K, r, sigma, T, max_M):
     analytical = bs_call_price(S0, K, r, sigma, T)
     Ms = np.logspace(2, np.log10(max_M), 15).astype(int)
@@ -121,9 +107,7 @@ def convergence_plot(S0, K, r, sigma, T, max_M):
     plt.legend()
     plt.show()
 
-# =======================
 #Example of use
-# =======================
 S0, K = 100, 100
 r, sigma, T = 0.05, 0.2, 1.0
 

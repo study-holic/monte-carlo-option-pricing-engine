@@ -26,7 +26,7 @@ with closed-form solution:
 S_T = S_0 * exp( (r - 0.5 σ^2) T + σ sqrt(T) Z )    where Z ~ N(0,1)
 ```
 
-Monte Carlo simulation approximates the expectation by generating M independent samples of S_T and averaging the payoff.
+Monte Carlo simulation approximates the expectation by generating M independent samples of S_T and averaging the payoff. Each S_T is drawn exactly in one step from this closed form, so the estimators carry no time-discretisation bias.
 
 The methods here follow standard quant practice: variance reduction, checking against the analytical price, and numerical Greeks.
 
@@ -88,6 +88,8 @@ Delta = e^{-rT} * E[ 1_{S_T > K} * (S_T / S_0) ]
 Gamma = ( C(S_0 + h) - 2 C(S_0) + C(S_0 - h) ) / h^2
 ```
 
+The three prices share the same normal draws (common random numbers), and the default bump is h = 0.01 S_0.
+
 ---
 
 ## 4. Convergence
@@ -104,6 +106,7 @@ Dependencies:
 numpy
 scipy
 matplotlib
+pytest
 ```
 
 Run:
@@ -118,7 +121,15 @@ This outputs:
 * antithetic variates price
 * control variate price
 * Delta and Gamma
-* a convergence plot
+* a convergence plot comparing plain, antithetic, and control variate estimators
+
+Tests:
+
+```
+pytest
+```
+
+The tests check each estimator against the analytical Black-Scholes price to within four standard errors.
 
 ---
 
@@ -126,6 +137,7 @@ This outputs:
 
 ```
 monte_carlo_option_pricing.py     # Full implementation
+test_monte_carlo_option_pricing.py # Tests against the analytical price
 README.md                         # Documentation
 LICENSE                           # MIT license
 ```
